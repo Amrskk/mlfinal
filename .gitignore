@@ -1,0 +1,24 @@
+# Run artifacts
+*.log
+results.csv
+results.json
+model_comparison.csv
+calibration_ablation.csv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Env
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+.ruff_cache
+.vscode

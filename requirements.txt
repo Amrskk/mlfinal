@@ -1,0 +1,19 @@
+# Pinned for reproducibility. Tested on Python 3.12.
+# Numpy is held below 2 because matplotlib in this environment was
+# compiled against numpy 1.x; you can bump both together if you like.
+
+numpy==1.26.4
+pandas>=2.1,<3
+scipy>=1.11,<2
+matplotlib>=3.8,<4
+seaborn>=0.13,<1
+
+scikit-learn>=1.6,<2          # 1.6+ for sklearn.frozen.FrozenEstimator
+xgboost>=2.0,<3
+lightgbm>=4.1,<5
+imbalanced-learn>=0.12,<1     # Borderline-SMOTE
+
+shap>=0.45                    # TreeExplainer for the LGBM base learner
+optuna>=3.5                   # used for the optional tuning cell
+nbformat>=5.10                # only for regenerating the notebook
+jupyter>=1.0
