@@ -20,8 +20,7 @@ def code(src):
 md("""
 # MAGIC Gamma Telescope — Headline model: Optuna-tuned XGBoost
 
-End-to-end training pipeline implementing every fix from
-`METHODOLOGY_REVIEW.md`. The **shipped model** is **Optuna-tuned XGBoost**
+The **shipped model** is **Optuna-tuned XGBoost**
 wrapped in `MagicFeatureEngineer → StandardScaler → Borderline-SMOTE →
 XGBoost → sigmoid calibration`. On the held-out test set it reaches
 **TPR = 0.349 at FPR = 0.01**, beating Random Forest, LightGBM, SVM-RBF,
@@ -29,15 +28,13 @@ and a five-learner stacking ensemble on every low-FPR operating point.
 
 The headline metric is **gamma signal efficiency at fixed hadron
 mis-identification rate** (TPR at FPR ∈ {1%, 5%, 10%}), not raw accuracy
-or aggregate AUC — the UCI dataset card specifically asks for this.
+or aggregate AUC 
 
 **Why XGBoost beat stacking.** The original proposal called for a stacking
-ensemble as the headline model. We built it (§6) and measured carefully
-(§11): the LR meta-learner's sigmoid output collapses resolution in the
+ensemble as the headline model. We built it and measured : the LR meta-learner's sigmoid output collapses resolution in the
 high-confidence tail — exactly where the headline metric lives. The stack
 lands at TPR=0.215 vs XGBoost's TPR=0.349 at FPR=0.01, even though
-aggregate ROC-AUC is within 0.01 of each other. We report this negative
-result honestly rather than burying it.
+aggregate ROC-AUC is within 0.01 of each other
 
 ## Sections
 1. Setup & reproducibility
@@ -163,7 +160,7 @@ Each baseline is wrapped in an `imblearn.Pipeline` that does
 **feature engineering → standard scaling → Borderline-SMOTE → model**.
 Because we use the imblearn Pipeline (not the sklearn one) the SMOTE
 step is **only applied at `fit` time**, never to validation / test
-data — this is the leak-safe pattern.
+data
 
 All three baselines are evaluated with `StratifiedKFold(5)` on the
 training set, and final test-set numbers are reported in §8.
@@ -222,13 +219,12 @@ for name, pipe in baselines.items():
 md("""
 ## 5b. Optuna tuning for XGBoost
 
-XGBoost is the strongest single learner (see ablation in §11), so it
-gets the tuning budget. We optimize **partial AUC restricted to
+We optimize **partial AUC restricted to
 FPR ≤ 0.2** rather than raw ROC-AUC — pAUC is a smooth proxy for
 "signal efficiency at low FPR" without the discretization noise of
 TPR@FPR=0.01 on a 3.8k validation set.
 
-Important: tuning runs on `X_train` (fit) → `X_val` (score).
+Tuning runs on `X_train` (fit) → `X_val` (score).
 **The test set is untouched.** Results go into `best_xgb_params`,
 which is reused by both the standalone XGBoost baseline below and
 the XGBoost base learner inside the stack.
@@ -264,8 +260,6 @@ def xgb_objective(trial):
     p_val = pipe.predict_proba(X_val)[:, 1]
     return partial_auc(y_val, p_val, max_fpr=0.2)
 
-# Modest budget for the notebook — 25 trials runs in ~60-90s.
-# Bump n_trials to ~100 if you want a published-quality result.
 study = optuna.create_study(direction="maximize",
                             sampler=optuna.samplers.TPESampler(seed=SEED))
 study.optimize(xgb_objective, n_trials=25, show_progress_bar=False)
@@ -277,7 +271,7 @@ print("best params:", best_xgb_params)
 
 #
 md("""
-## 5c. Headline model — tuned XGBoost: fit, calibrate, evaluate
+## 5c. Headline model — tuned XGBoost
 
 This is the **deployed model**. We fit Optuna-tuned XGBoost on the train
 split, calibrate its probabilities with sigmoid (Platt) on the validation
@@ -360,7 +354,7 @@ model. We built it to test the hypothesis. Section 11 confirms it does
 **not** beat tuned XGBoost on the low-FPR region; this section is kept
 as honest documentation of that finding.
 
-Five deliberately diverse base learners with an L2 LR meta-learner.
+Five diverse base learners with an L2 LR meta-learner.
 `passthrough=False` so the meta-learner sees only out-of-fold base
 probabilities, not the raw features (avoids double-counting + meta-learner
 overfit on small data).
@@ -422,8 +416,7 @@ it in `CalibratedClassifierCV` using the **validation** split, mirroring
 exactly the calibration we did for the headline XGBoost in §5c — so the
 two are evaluated on the same footing.
 
-**Calibration choice — `sigmoid`, not `isotonic`.** Empirically (see
-the ablation in §11), isotonic calibration on a ~3.8k validation split
+**Calibration choice — `sigmoid`, not `isotonic`.** Empirically, isotonic calibration on a ~3.8k validation split
 flatlines the score distribution in the high-confidence tail, dropping
 TPR@FPR=0.01 from 0.135 → 0.002. Sigmoid (Platt) calibration is
 monotone, so ROC-based metrics are unchanged; only the absolute
@@ -436,10 +429,6 @@ from sklearn.frozen import FrozenEstimator
 
 stacking_pipe.fit(X_train, y_train)
 
-# Freeze the fitted pipe, then fit sigmoid (Platt) calibration on the
-# held-out validation split. Monotone, so ROC-based metrics are
-# unchanged; probabilities become well-calibrated for operating-point
-# selection. See §11 ablation for why isotonic is the wrong choice here.
 calibrated = CalibratedClassifierCV(FrozenEstimator(stacking_pipe), method="sigmoid")
 calibrated.fit(X_val, y_val)
 
@@ -455,7 +444,7 @@ print(f"val ROC-AUC  calibrated  : {roc_auc_score(y_val, p_cal):.4f}")
 md("""
 ## 8. Stacking — test-set evaluation
 
-For comparison with the headline XGBoost result from §5c. The pattern
+For comparison with the headline XGBoost result the pattern
 is identical; only the model changes.
 
 1. **Efficiency table** — gamma TPR at FPR ∈ {1%, 5%, 10%, 20%}. *Headline.*
@@ -528,7 +517,7 @@ fig.tight_layout(); plt.show()
 md("""
 ## 9. SHAP feature importance — on the headline XGBoost model
 
-SHAP is computed directly on the **shipped XGBoost model** (§5c) because
+SHAP is computed directly on the **shipped XGBoost model**  because
 that's what gets deployed. SHAP on a stacking meta-learner-on-top-of-OOF-
 predictions is ill-defined; running it on the headline model gives an
 interpretation that matches what users will actually see in production.
@@ -536,7 +525,7 @@ interpretation that matches what users will actually see in production.
 code("""
 import shap
 
-# Pull the fitted XGBoost out of the headline pipeline (§5c)
+# Pull the fitted XGBoost out of the headline pipeline
 xgb_model = xgb_pipe.named_steps["model"]
 
 # Apply the same preprocessing the model saw (features → scale, skipping SMOTE)
@@ -591,9 +580,6 @@ print(f"\\nFeatures with p>=0.05 (cannot reject same-distribution): "
 #
 md("""
 ## Results summary
-
-This cell collects the headline numbers in one place so they can be
-copy-pasted into the README without retyping.
 """)
 code("""
 summary = {
@@ -613,7 +599,7 @@ pd.Series(summary).round(4).to_frame("value")
 
 #
 md("""
-## 11. Model comparison and honest reporting
+## 11. Model comparison
 
 The headline metric is **TPR at fixed FPR**, not aggregate ROC-AUC.
 We rebuild the baselines once on the train split, evaluate on test,
