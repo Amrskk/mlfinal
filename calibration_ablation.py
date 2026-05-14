@@ -9,6 +9,7 @@ Compares five configurations of the same fitted stack:
 
 Output: calibration_ablation.csv  (see README §Results for the table)
 """
+
 import os
 import random
 import sys
@@ -85,9 +86,7 @@ def make_stack(passthrough):
     ]
     return StackingClassifier(
         estimators=base,
-        final_estimator=LogisticRegression(
-            C=1.0, max_iter=2000, random_state=SEED
-        ),
+        final_estimator=LogisticRegression(C=1.0, max_iter=2000, random_state=SEED),
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED),
         passthrough=passthrough,
         n_jobs=-1,
@@ -181,9 +180,7 @@ def main():
         )
     )
 
-    cal_sig_pt = CalibratedClassifierCV(
-        FrozenEstimator(stack_yes), method="sigmoid"
-    )
+    cal_sig_pt = CalibratedClassifierCV(FrozenEstimator(stack_yes), method="sigmoid")
     cal_sig_pt.fit(X_va, y_va)
     rows.append(
         eval_probs(
@@ -193,7 +190,7 @@ def main():
         )
     )
 
-    print("\n=== CALIBRATION ABLATION (test set) ===")
+    print("\n CALIBRATION ABLATION (test set)")
     df_out = pd.DataFrame(rows).set_index("config")
     print(df_out.round(4).to_string())
     df_out.round(4).to_csv("calibration_ablation.csv")

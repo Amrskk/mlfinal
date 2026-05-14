@@ -12,6 +12,10 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 
+# Deployment artifacts (regenerable from run_full.py)
+artifacts/
+mlruns/
+
 # Env
 .env
 venv/

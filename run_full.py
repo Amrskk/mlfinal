@@ -11,13 +11,16 @@ Writes:
   - results.json        : same data as JSON
   - best_xgb_params.json: tuned hyperparameters for downstream reuse
 """
+
 import json
 import os
 import random
 import sys
 import time
 import warnings
+from pathlib import Path
 
+import joblib
 import numpy as np
 import optuna
 import pandas as pd
@@ -30,8 +33,10 @@ from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
+    brier_score_loss,
     precision_recall_curve,
     roc_auc_score,
+    roc_curve,
 )
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -44,6 +49,14 @@ from src.metrics import partial_auc, tpr_at_fpr  # noqa: E402
 
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+USE_MLFLOW = os.environ.get("MLFLOW_DISABLED", "0") != "1"
+try:
+    if USE_MLFLOW:
+        import mlflow  # type: ignore
+        import mlflow.sklearn  # type: ignore
+except ImportError:
+    USE_MLFLOW = False
 
 SEED = 42
 random.seed(SEED)
@@ -78,17 +91,11 @@ def tune_xgb(X_tr, y_tr, X_va, y_va, n_trials=25):
         params = {
             "n_estimators": trial.suggest_int("n_estimators", 200, 1200),
             "max_depth": trial.suggest_int("max_depth", 3, 10),
-            "learning_rate": trial.suggest_float(
-                "learning_rate", 0.01, 0.2, log=True
-            ),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
             "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-            "colsample_bytree": trial.suggest_float(
-                "colsample_bytree", 0.6, 1.0
-            ),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
             "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
-            "reg_lambda": trial.suggest_float(
-                "reg_lambda", 1e-3, 10.0, log=True
-            ),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
             "gamma": trial.suggest_float("gamma", 0.0, 5.0),
         }
         m = XGBClassifier(
@@ -111,8 +118,23 @@ def tune_xgb(X_tr, y_tr, X_va, y_va, n_trials=25):
     return study.best_params, study.best_value
 
 
+def _maybe_start_mlflow():
+    """Configure MLflow with a local file store and start a run.
+
+    Returns the active run (or None if MLflow is disabled / unavailable).
+    The file store keeps everything under ./mlruns so no separate server
+    is needed; `mlflow ui` works straight against it.
+    """
+    if not USE_MLFLOW:
+        return None
+    mlflow.set_tracking_uri("file:./mlruns")
+    mlflow.set_experiment("magic-gamma")
+    return mlflow.start_run(run_name="xgboost-optuna-headline")
+
+
 def main():
     t0 = time.time()
+    mlflow_run = _maybe_start_mlflow()
 
     df = (
         pd.read_csv("telescope_data.csv", index_col=0)
@@ -131,6 +153,9 @@ def main():
         f"split  train {X_tr.shape[0]}  val {X_va.shape[0]}  test {X_te.shape[0]}",
         flush=True,
     )
+
+    artifact_dir = Path("artifacts")
+    artifact_dir.mkdir(exist_ok=True)
 
     print("tuning XGBoost via Optuna (25 trials)...", flush=True)
     t = time.time()
@@ -186,6 +211,74 @@ def main():
         summary[name]["fit_s"] = round(time.time() - t, 1)
         print(f"  {name:18s} done in {summary[name]['fit_s']}s", flush=True)
 
+    # HEADLINE PATH: fit + sigmoid-calibrate the tuned XGBoost, pick a
+    # deployment threshold at FPR=0.01 on val, save artifacts
+    print("fitting headline XGBoost...", flush=True)
+    t = time.time()
+    headline_xgb_pipe = make_pipe(
+        XGBClassifier(
+            **best_xgb_params,
+            eval_metric="auc",
+            tree_method="hist",
+            n_jobs=-1,
+            random_state=SEED,
+            verbosity=0,
+        )
+    ).fit(X_tr, y_tr)
+    print(f"  headline fit in {time.time() - t:.1f}s", flush=True)
+
+    print("sigmoid-calibrating headline on val...", flush=True)
+    headline_cal = CalibratedClassifierCV(
+        FrozenEstimator(headline_xgb_pipe), method="sigmoid"
+    )
+    headline_cal.fit(X_va, y_va)
+
+    # Pick deployment threshold on VAL at FPR=0.01 (operational target).
+    # Using val (not test) for threshold pick keeps test sacred.
+    p_va = headline_cal.predict_proba(X_va)[:, 1]
+    fpr_va, tpr_va, thr_va = roc_curve(y_va, p_va)
+    idx = int(np.searchsorted(fpr_va, 0.01, side="right") - 1)
+    idx = max(0, idx)
+    deploy_threshold = float(thr_va[idx])
+    print(
+        f"  deployment threshold = {deploy_threshold:.4f} "
+        f"(val FPR={fpr_va[idx]:.4f}, val TPR={tpr_va[idx]:.4f})",
+        flush=True,
+    )
+
+    # Save the deployable artifact
+    joblib.dump(headline_cal, artifact_dir / "model_v1.joblib")
+    # Compute baselines for the monitoring module to compare against.
+    # These are measured on the validation split — the same data the
+    # threshold was picked against — so production drift can be detected
+    # relative to "the model's known good behavior at deploy time."
+    expected_tpr_at_fpr_001 = float(tpr_va[idx])
+    expected_brier = float(brier_score_loss(y_va, p_va))
+    deployment_config = {
+        "model_path": "artifacts/model_v1.joblib",
+        "model_version": "v1",
+        "model_type": "xgboost-optuna-tuned + sigmoid",
+        "feature_order": list(RAW_FEATURES),
+        "deployment_threshold": deploy_threshold,
+        "threshold_chosen_at": "val FPR=0.01",
+        "training_seed": SEED,
+        "training_rows": int(X_tr.shape[0]),
+        "validation_rows": int(X_va.shape[0]),
+        "best_xgb_params": best_xgb_params,
+        # Baselines for the monitoring module
+        "expected_tpr_at_fpr_001": expected_tpr_at_fpr_001,
+        "expected_brier": expected_brier,
+    }
+    with open(artifact_dir / "deployment_config.json", "w") as f:
+        json.dump(deployment_config, f, indent=2)
+    print(
+        "  saved artifacts/model_v1.joblib + artifacts/deployment_config.json",
+        flush=True,
+    )
+
+    p_te_headline = headline_cal.predict_proba(X_te)[:, 1]
+    summary["XGBoost+sigmoid (DEPLOYED)"] = score_block(y_te, p_te_headline)
+
     print("fitting stack (5 base learners)...", flush=True)
     t = time.time()
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
@@ -238,9 +331,7 @@ def main():
     ]
     stack = StackingClassifier(
         estimators=base_learners,
-        final_estimator=LogisticRegression(
-            C=1.0, max_iter=2000, random_state=SEED
-        ),
+        final_estimator=LogisticRegression(C=1.0, max_iter=2000, random_state=SEED),
         cv=cv,
         passthrough=False,
         n_jobs=-1,
@@ -263,7 +354,7 @@ def main():
     summary["Stack + sigmoid (5 base)"]["BestF1Thresh"] = float(thr[best_idx])
 
     results = pd.DataFrame(summary).T
-    print("\n=== FINAL TEST-SET RESULTS ===")
+    print("\n FINAL TEST-SET RESULTS ")
     print(results.round(4).to_string())
     results.round(4).to_csv("results.csv")
     with open("results.json", "w") as f:
@@ -274,6 +365,39 @@ def main():
         )
     with open("best_xgb_params.json", "w") as f:
         json.dump(best_xgb_params, f, indent=2)
+
+    # MLflow logging
+    if mlflow_run is not None:
+        mlflow.log_params(best_xgb_params)
+        mlflow.log_param("model_type", deployment_config["model_type"])
+        mlflow.log_param("training_rows", deployment_config["training_rows"])
+        mlflow.log_param("deployment_threshold", deploy_threshold)
+
+        # Headline metrics (the DEPLOYED model row). MLflow restricts metric
+        # names to alnum + _ - . space : / — sanitize @ = < > out.
+        def _mlflow_safe(name):
+            return (
+                name.replace("<=", "_lte_")  # two-char first
+                .replace(">=", "_gte_")
+                .replace("<", "_lt_")  # now < is guaranteed standalone
+                .replace(">", "_gt_")
+                .replace("@", "_at_")
+                .replace("=", "_eq_")
+            )
+
+        for k, v in summary["XGBoost+sigmoid (DEPLOYED)"].items():
+            mlflow.log_metric(_mlflow_safe(k), v)
+        mlflow.log_artifact(str(artifact_dir / "model_v1.joblib"))
+        mlflow.log_artifact(str(artifact_dir / "deployment_config.json"))
+        mlflow.log_artifact("results.csv")
+        mlflow.sklearn.log_model(
+            headline_cal,
+            artifact_path="model",
+            registered_model_name="magic-gamma",
+        )
+        mlflow.end_run()
+        print("  mlflow run logged to ./mlruns")
+
     print(f"\ntotal wall time: {time.time() - t0:.1f}s")
 
 

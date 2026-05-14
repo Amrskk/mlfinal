@@ -7,6 +7,7 @@ not the aggregate AUC. These helpers compute:
   * partial_auc  : AUC restricted to FPR <= max_fpr (normalized to [0, 1])
   * efficiency_table : prints a summary at multiple operating points
 """
+
 from __future__ import annotations
 
 from typing import Iterable
@@ -20,7 +21,7 @@ def tpr_at_fpr(y_true, y_score, fpr_target: float) -> float:
     """Return the TPR at the operating point with FPR <= fpr_target (largest such).
 
     Parameters
-    ----------
+
     y_true : array-like, binary {0, 1} where 1 = gamma (signal)
     y_score : array-like, predicted probability of class 1
     fpr_target : float, target false-positive (hadron mis-ID) rate

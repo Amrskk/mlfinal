@@ -8,6 +8,7 @@ because fLength, fWidth, fAsym, fM3*, and fDist are heavy-tailed.
 This is implemented as a sklearn-compatible transformer so it composes
 cleanly with Pipeline / StackingClassifier / cross_val_score.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -17,19 +18,27 @@ from sklearn.base import BaseEstimator, TransformerMixin
 EPS = 1e-3
 
 RAW_FEATURES = [
-    "fLength", "fWidth", "fSize", "fConc", "fConc1",
-    "fAsym", "fM3Long", "fM3Trans", "fAlpha", "fDist",
+    "fLength",
+    "fWidth",
+    "fSize",
+    "fConc",
+    "fConc1",
+    "fAsym",
+    "fM3Long",
+    "fM3Trans",
+    "fAlpha",
+    "fDist",
 ]
 
 ENGINEERED_FEATURES = [
-    "ellipticity",          # fLength / (fWidth + eps)
-    "shower_density",       # fSize / (fLength * fWidth + eps)
-    "miss_parameter",       # fDist * sin(fAlpha)
+    "ellipticity",  # fLength / (fWidth + eps)
+    "shower_density",  # fSize / (fLength * fWidth + eps)
+    "miss_parameter",  # fDist * sin(fAlpha)
     "concentration_ratio",  # fConc / (fConc1 + eps)
-    "m3_magnitude",         # sqrt(fM3Long^2 + fM3Trans^2)
-    "log_bright_pair",      # fSize + log10(fConc + eps)  -- I5 fix
-    "long_asym",            # fAsym / (fLength + eps)
-    "cos_alpha",            # cos(fAlpha)  -- N2 add
+    "m3_magnitude",  # sqrt(fM3Long^2 + fM3Trans^2)
+    "log_bright_pair",  # fSize + log10(fConc + eps)  -- I5 fix
+    "long_asym",  # fAsym / (fLength + eps)
+    "cos_alpha",  # cos(fAlpha)  -- N2 add
 ]
 
 
@@ -42,7 +51,7 @@ class MagicFeatureEngineer(BaseEstimator, TransformerMixin):
     """Compute physics-informed features. Pass-through preserves raw features.
 
     Parameters
-    ----------
+
     log_transform : bool, default=True
         If True, apply log1p (signed for fAsym/fM3*) to heavy-tailed inputs.
     keep_raw : bool, default=True

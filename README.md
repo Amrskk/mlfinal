@@ -3,14 +3,13 @@
 > **Headline model:** Optuna-tuned XGBoost with sigmoid calibration, achieving **TPR = 0.349 at FPR = 0.01** on the held-out test set (3,781 samples). Beats Random Forest, LightGBM, SVM-RBF, and a five-learner stacking ensemble on every low-FPR operating point.
 >
 > **Why XGBoost, not stacking?** We initially proposed a stacking ensemble as the main model. End-to-end measurement (see Results section below and `calibration_ablation.csv`) showed that the LR meta-learner's sigmoid output collapses resolution in the high-confidence tail — exactly where gamma-ray classification operates. Tuned XGBoost beats every stacking variant we tried. We report this finding honestly rather than burying it: the stack is now documented as a comparison study, not the production model.
->
-> See `METHODOLOGY_REVIEW.md` for the methodology audit that drove the design choices, `magic_gamma_pipeline.ipynb` for the runnable pipeline, and `results.csv` / `best_xgb_params.json` for the current numbers and tuned hyperparameters.
+
 
 ### Background: What Are We Looking At?
 
 The MAGIC telescope detects **Cherenkov radiation** — flashes of blue light produced when gamma rays from deep space strike Earth's atmosphere, creating cascading particle showers. The telescope's camera captures an image of each shower, and a Principal Component Analysis reduces that image to an **ellipse** described by the 10 Hillas parameters in our dataset.
 
-The fundamental challenge: **gamma-ray showers** (signal) and **hadronic showers** (background cosmic rays) both produce Cherenkov light, but their ellipse shapes differ because of the underlying physics. Gamma showers are electromagnetic — clean, narrow, and aligned toward the source. Hadronic showers involve nuclear interactions — messier, wider, and randomly oriented.
+The fundamental task: **gamma-ray showers** (signal) and **hadronic showers** (background cosmic rays) both produce Cherenkov light, but their ellipse shapes differ because of the underlying physics. Gamma showers are electromagnetic — clean, narrow, and aligned toward the source. Hadronic showers involve nuclear interactions — messier, wider, and randomly oriented.
 
 Our raw features describe this ellipse:
 
@@ -333,14 +332,77 @@ mlfinal/
 └── LICENSE.txt
 ```
 
-## How to run
+## How to run — training
 
 ```bash
 pip install -r requirements.txt
-python smoke_test.py                # quick sanity check (~40s)
-python run_full.py                  # full training + ablation (~60s)
+python smoke_test.py                # plumbing check (~30s)
+python run_full.py                  # Optuna + baselines + stack + artifact (~130s)
 jupyter lab magic_gamma_pipeline.ipynb
 ```
+
+`run_full.py` produces:
+
+- `artifacts/model_v1.joblib` — sigmoid-calibrated tuned XGBoost, the deployable model
+- `artifacts/deployment_config.json` — threshold (picked at val FPR=0.01), tuned params, monitoring baselines
+- `results.csv`, `results.json`, `best_xgb_params.json` — comparison table & metadata
+- `mlruns/` — MLflow run with params, metrics, and the registered `magic-gamma` model (set `MLFLOW_DISABLED=1` to skip)
+
+Inspect the MLflow UI with `mlflow ui --backend-store-uri ./mlruns`.
+
+## How to run — serving
+
+### Option A: local uvicorn
+
+```bash
+pip install fastapi 'uvicorn[standard]' joblib
+uvicorn server:app --port 8000
+```
+
+Then in another shell:
+
+```bash
+curl http://localhost:8000/health
+
+curl -X POST http://localhost:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"fLength":28.8,"fWidth":16.0,"fSize":2.64,"fConc":0.39,"fConc1":0.20,
+       "fAsym":27.7,"fM3Long":22.0,"fM3Trans":-8.2,"fAlpha":40.1,"fDist":81.9}'
+```
+
+### Option B: Docker
+
+```bash
+docker build -t magic-gamma:v1 .
+docker run --rm -p 8000:8000 magic-gamma:v1
+```
+
+Multi-stage image (~250 MB final), runs as a non-root user, ships its own healthcheck. The `artifacts/` directory is baked in so the container is fully self-contained.
+
+### In-process API smoke test
+
+```bash
+python api_smoke.py
+```
+
+Uses `fastapi.testclient` to exercise every endpoint without starting uvicorn. Verifies happy-path predictions, batch endpoint, and that input validation correctly rejects out-of-range Hillas parameters.
+
+## How to run — monitoring
+
+After deployment, check for drift against the reference training distribution:
+
+```bash
+# input-only drift (no production labels needed)
+python monitoring.py --reference telescope_data.csv --current recent_batch.csv
+
+# full check with labels — adds performance & calibration drift
+python monitoring.py \
+  --reference telescope_data.csv \
+  --current   recent_batch.csv \
+  --labels    recent_labels.csv
+```
+
+The script prints a per-feature PSI table; with labels, it also runs the TPR@FPR=0.01 decay check (baseline lives in `deployment_config.json`) and the Brier-score calibration check. Each monitor emits its own verdict: `RETRAIN` (input drift), `REPICK_THRESHOLD` (performance decay), or `REFIT_SIGMOID` (calibration drift). Matches the three-remediation flow in the Deployment & Monitoring diagram.
 
 ---
 

@@ -1,18 +1,22 @@
 """Generate magic_gamma_pipeline.ipynb. Run once; do not commit this file."""
-import json
+
+import json  # noqa
 import nbformat as nbf
 from pathlib import Path
 
 nb = nbf.v4.new_notebook()
 cells = []
 
+
 def md(text):
     cells.append(nbf.v4.new_markdown_cell(text.strip()))
+
 
 def code(src):
     cells.append(nbf.v4.new_code_cell(src.strip()))
 
-# ============================================================
+
+#
 md("""
 # MAGIC Gamma Telescope — Headline model: Optuna-tuned XGBoost
 
@@ -50,7 +54,7 @@ result honestly rather than burying it.
 11. Model comparison — confirms tuned XGBoost as the production choice
 """)
 
-# ============================================================
+#
 md("## 1. Setup & reproducibility")
 code("""
 import os, sys, warnings, random
@@ -74,7 +78,7 @@ from src.metrics import tpr_at_fpr, partial_auc, efficiency_table
 print("numpy", np.__version__, "| pandas", pd.__version__)
 """)
 
-# ============================================================
+#
 md("## 2. Load data, drop duplicates, stratified split (60/20/20)")
 code("""
 df = pd.read_csv("telescope_data.csv", index_col=0)
@@ -108,7 +112,7 @@ print("gamma fraction — train: %.3f, val: %.3f, test: %.3f"
       % (y_train.mean(), y_val.mean(), y_test.mean()))
 """)
 
-# ============================================================
+#
 md("## 3. EDA — distributions and the divide-by-zero landmines")
 code("""
 # Physical constraint check on the raw data
@@ -128,7 +132,7 @@ for ax, col in zip(axes.flatten(), RAW_FEATURES):
 fig.tight_layout(); plt.show()
 """)
 
-# ============================================================
+#
 md("""
 ## 4. Feature engineering — sanity check
 
@@ -151,7 +155,7 @@ print("any inf?", np.isinf(Xt_full).any(), "  any nan?", np.isnan(Xt_full).any()
 print("output shape:", Xt_full.shape)
 """)
 
-# ============================================================
+#
 md("""
 ## 5. Baselines — RF, XGBoost, LightGBM
 
@@ -214,7 +218,7 @@ for name, pipe in baselines.items():
     print(f"{name:14s}  ROC-AUC CV = {scores.mean():.4f} ± {scores.std():.4f}")
 """)
 
-# ============================================================
+#
 md("""
 ## 5b. Optuna tuning for XGBoost
 
@@ -271,7 +275,7 @@ print(f"best pAUC<=0.2 on val: {study.best_value:.4f}")
 print("best params:", best_xgb_params)
 """)
 
-# ============================================================
+#
 md("""
 ## 5c. Headline model — tuned XGBoost: fit, calibrate, evaluate
 
@@ -309,7 +313,7 @@ xgb_calibrated.fit(X_val, y_val)
 p_xgb_test = xgb_calibrated.predict_proba(X_test)[:, 1]
 
 xgb_eff = efficiency_table(y_test, p_xgb_test, fpr_targets=(0.01, 0.05, 0.10, 0.20))
-print("=== HEADLINE MODEL: tuned XGBoost + sigmoid ===")
+print(" HEADLINE MODEL: tuned XGBoost + sigmoid ")
 print(xgb_eff.to_string(index=False))
 print(f"\\nROC-AUC          : {roc_auc_score(y_test, p_xgb_test):.4f}")
 print(f"Partial AUC (.2) : {partial_auc(y_test, p_xgb_test, 0.2):.4f}")
@@ -347,7 +351,7 @@ axes[2].legend()
 fig.tight_layout(); plt.show()
 """)
 
-# ============================================================
+#
 md("""
 ## 6. Stacking classifier — comparison study
 
@@ -409,7 +413,7 @@ print(f"Stacking      ROC-AUC CV = {stack_scores.mean():.4f} ± {stack_scores.st
 results["Stacking"] = stack_scores
 """)
 
-# ============================================================
+#
 md("""
 ## 7. Stacking — fit on train, calibrate on validation
 
@@ -447,7 +451,7 @@ print(f"val ROC-AUC  uncalibrated: {roc_auc_score(y_val, p_uncal):.4f}")
 print(f"val ROC-AUC  calibrated  : {roc_auc_score(y_val, p_cal):.4f}")
 """)
 
-# ============================================================
+#
 md("""
 ## 8. Stacking — test-set evaluation
 
@@ -469,7 +473,7 @@ p_test = calibrated.predict_proba(X_test)[:, 1]
 
 # 1. Headline efficiency table
 eff = efficiency_table(y_test, p_test, fpr_targets=(0.01, 0.05, 0.10, 0.20))
-print("=== Gamma signal efficiency at fixed hadron mis-ID rate ===")
+print(" Gamma signal efficiency at fixed hadron mis-ID rate ")
 print(eff.to_string(index=False))
 """)
 
@@ -481,12 +485,12 @@ print(f"ROC-AUC (full)         : {auc_full:.4f}")
 print(f"Partial AUC (FPR<=0.2) : {auc_part:.4f}")
 
 # 3. PR-AUC and F1
-pr_auc = average_precision_score(y_test, p_test)
+avg_pr_sc = average_precision_score(y_test, p_test)
 prec, rec, thr = precision_recall_curve(y_test, p_test)
 f1s = 2 * prec * rec / (prec + rec + 1e-9)
 best_idx = np.argmax(f1s[:-1])  # last entry has no threshold
 best_thr = thr[best_idx]; best_f1 = f1s[best_idx]
-print(f"PR-AUC                 : {pr_auc:.4f}")
+print(f"PR-AUC                 : {avg_pr_sc:.4f}")
 print(f"Best F1                : {best_f1:.4f}  at threshold {best_thr:.3f}")
 """)
 
@@ -506,7 +510,7 @@ axes[0].set_xlabel("False positive rate (hadron mis-ID)")
 axes[0].set_ylabel("True positive rate (gamma efficiency)")
 axes[0].set_title("ROC"); axes[0].legend()
 
-axes[1].plot(rec, prec, lw=2, label=f"AP={pr_auc:.3f}")
+axes[1].plot(rec, prec, lw=2, label=f"AP={avg_pr_sc:.3f}")
 axes[1].set_xlabel("Recall"); axes[1].set_ylabel("Precision")
 axes[1].set_title("Precision-Recall"); axes[1].legend()
 
@@ -520,7 +524,7 @@ axes[2].set_title("Calibration (sigmoid)"); axes[2].legend()
 fig.tight_layout(); plt.show()
 """)
 
-# ============================================================
+#
 md("""
 ## 9. SHAP feature importance — on the headline XGBoost model
 
@@ -550,7 +554,7 @@ shap.summary_plot(sv, Xte_t, feature_names=feat_names, plot_type="bar", show=Fal
 plt.tight_layout(); plt.show()
 """)
 
-# ============================================================
+#
 md("""
 ## 10. Synthetic-data validation — KS test on SMOTE samples
 
@@ -584,7 +588,7 @@ print(f"\\nFeatures with p>=0.05 (cannot reject same-distribution): "
       f"{(ks_df.p_value >= 0.05).sum()}/{len(ks_df)}")
 """)
 
-# ============================================================
+#
 md("""
 ## Results summary
 
@@ -595,7 +599,7 @@ code("""
 summary = {
     "ROC-AUC (test)":              auc_full,
     "Partial AUC FPR<=0.2 (test)": auc_part,
-    "PR-AUC (test)":               pr_auc,
+    "PR-AUC (test)":               avg_pr_sc,
     "Best F1 (test)":               best_f1,
     "TPR @ FPR=0.01":               tpr_at_fpr(y_test, p_test, 0.01),
     "TPR @ FPR=0.05":               tpr_at_fpr(y_test, p_test, 0.05),
@@ -605,9 +609,9 @@ pd.Series(summary).round(4).to_frame("value")
 
 """)
 
-# ============================================================
+#
 
-# ============================================================
+#
 md("""
 ## 11. Model comparison and honest reporting
 
@@ -686,15 +690,10 @@ The findings on this run (your numbers may vary by a few thousandths):
    loses resolution exactly where the headline metric is measured.
 3. **Aggregate AUC is misleading here.** The stack's ROC-AUC is within
    0.01 of XGBoost's, but its TPR@FPR=0.01 is 60% lower.
-
-**Practical recommendation for deployment:** ship the **calibrated
-XGBoost baseline** as the production model and keep the stack as an
-ensemble for *high-FPR* operating points (e.g. monitoring dashboards
-where you tolerate ~10% hadron mis-ID). This is a real finding and
-should be in the README rather than buried.
+   
 """)
 
-# ============================================================
+#
 
 nb.cells = cells
 nb["metadata"] = {

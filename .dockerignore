@@ -1,0 +1,38 @@
+# Things that don't belong in the container
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+.ipynb_checkpoints
+.pytest_cache
+.venv
+venv
+.env
+
+# Large source files not needed for serving
+telescope_data.csv
+*.ipynb
+build_notebook.py
+diagram/
+
+# Training-only entry points
+run_full.py
+smoke_test.py
+calibration_ablation.py
+api_smoke.py
+monitoring.py
+
+# Generated outputs
+*.log
+results.csv
+results.json
+calibration_ablation.csv
+best_xgb_params.json
+mlruns/
+
+# Docs
+README.md
+METHODOLOGY_REVIEW.md
+LICENSE.txt
+About*.pdf
