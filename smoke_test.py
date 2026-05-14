@@ -6,6 +6,7 @@ Run from the repo root:
 Uses small estimator counts so it completes in ~30s. The real numbers
 come from `run_full.py`; this is just plumbing verification.
 """
+
 import os
 import random
 import sys
@@ -72,16 +73,13 @@ print(f"train {X_tr.shape}  val {X_va.shape}  test {X_te.shape}")
 # 3) Feature engineering sanity check
 fe = MagicFeatureEngineer()
 Xt = fe.fit_transform(X_tr)
+print(f"inf? {np.isinf(Xt).any()}  nan? {np.isnan(Xt).any()}  shape {Xt.shape}")
 print(
-    f"inf? {np.isinf(Xt).any()}  nan? {np.isnan(Xt).any()}  shape {Xt.shape}"
-)
-print(
-    f"physical constraint pass rate: "
-    f"{validate_physical_constraints(X_tr).mean():.4f}"
+    f"physical constraint pass rate: {validate_physical_constraints(X_tr).mean():.4f}"
 )
 
 # 4) Headline path — fit tuned-ish XGBoost (defaults, no Optuna in smoke test)
-print("\n=== HEADLINE PATH: XGBoost + sigmoid calibration ===")
+print("\n HEADLINE PATH: XGBoost + sigmoid calibration ")
 xgb_pipe = make_pipe(
     XGBClassifier(
         n_estimators=400,
@@ -103,7 +101,7 @@ print(f"PR-AUC           : {average_precision_score(y_te, p_xgb):.4f}")
 print(efficiency_table(y_te, p_xgb).round(4).to_string(index=False))
 
 # 5) Quick stack plumbing check — smaller estimators for speed
-print("\n=== STACK PLUMBING CHECK (smaller estimators) ===")
+print("\n STACK PLUMBING CHECK (smaller estimators) ")
 cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=SEED)
 base = [
     (
