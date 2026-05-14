@@ -1,0 +1,35 @@
+2026/05/14 07:31:03 INFO mlflow.tracking.fluent: Experiment with name 'magic-gamma' does not exist. Creating a new experiment.
+split  train 11343  val 3781  test 3781
+tuning XGBoost via Optuna (25 trials)...
+  Optuna done in 55.4s, best pAUC<=0.2 (val) = 0.8527
+  best params: {'n_estimators': 1100, 'max_depth': 5, 'learning_rate': 0.026365703773854412, 'subsample': 0.6068744601075835, 'colsample_bytree': 0.8279679066657979, 'min_child_weight': 5, 'reg_lambda': 8.845062079575694, 'gamma': 0.05453795212230679}
+  RandomForest       done in 2.3s
+  XGBoost (tuned)    done in 3.0s
+  LightGBM           done in 4.1s
+  SVM-RBF            done in 15.8s
+fitting headline XGBoost...
+  headline fit in 2.7s
+sigmoid-calibrating headline on val...
+  deployment threshold = 0.9672 (val FPR=0.0099, val TPR=0.3390)
+  saved artifacts/model_v1.joblib + artifacts/deployment_config.json
+fitting stack (5 base learners)...
+  stack fit in 49.4s
+calibrating (sigmoid)...
+  calibration in 1.6s
+2026/05/14 07:33:18 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+2026/05/14 07:33:18 WARNING mlflow.sklearn: Saving scikit-learn models in the pickle or cloudpickle format requires exercising caution because these formats rely on Python's object serialization mechanism, which can execute arbitrary code during deserialization. The recommended safe alternative is the 'skops' format. For more information, see: https://scikit-learn.org/stable/model_persistence.html
+2026/05/14 07:33:21 WARNING mlflow.utils.requirements_utils: Found lz4 version (4.0.2+dfsg) contains a local version label (+dfsg). MLflow logged a pip requirement for this package as 'lz4==4.0.2' without the local version label to make it installable from PyPI. To specify pip requirements containing local version labels, please use `conda_env` or `pip_requirements`.
+Successfully registered model 'magic-gamma'.
+Created version '1' of model 'magic-gamma'.
+
+ FINAL TEST-SET RESULTS 
+                            ROC-AUC  PR-AUC  pAUC<=0.2  TPR@FPR=0.01  TPR@FPR=0.05  TPR@FPR=0.10  fit_s  BestF1  BestF1Thresh
+RandomForest                 0.9359  0.9596     0.8489        0.3070        0.6164        0.8029    2.3     NaN           NaN
+XGBoost (tuned)              0.9415  0.9629     0.8558        0.3491        0.6330        0.8062    3.0     NaN           NaN
+LightGBM                     0.9405  0.9617     0.8520        0.3212        0.6160        0.7960    4.1     NaN           NaN
+SVM-RBF                      0.9212  0.9468     0.8152        0.2522        0.5333        0.7210   15.8     NaN           NaN
+XGBoost+sigmoid (DEPLOYED)   0.9415  0.9629     0.8558        0.3491        0.6330        0.8062    NaN     NaN           NaN
+Stack + sigmoid (5 base)     0.9328  0.9470     0.8406        0.2145        0.6115        0.7786    NaN  0.9186        0.2894
+  mlflow run logged to ./mlruns
+
+total wall time: 138.7s

@@ -1,0 +1,34 @@
+{
+  "model_path": "artifacts/model_v1.joblib",
+  "model_version": "v1",
+  "model_type": "xgboost-optuna-tuned + sigmoid",
+  "feature_order": [
+    "fLength",
+    "fWidth",
+    "fSize",
+    "fConc",
+    "fConc1",
+    "fAsym",
+    "fM3Long",
+    "fM3Trans",
+    "fAlpha",
+    "fDist"
+  ],
+  "deployment_threshold": 0.9671971201896667,
+  "threshold_chosen_at": "val FPR=0.01",
+  "training_seed": 42,
+  "training_rows": 11343,
+  "validation_rows": 3781,
+  "best_xgb_params": {
+    "n_estimators": 1100,
+    "max_depth": 5,
+    "learning_rate": 0.026365703773854412,
+    "subsample": 0.6068744601075835,
+    "colsample_bytree": 0.8279679066657979,
+    "min_child_weight": 5,
+    "reg_lambda": 8.845062079575694,
+    "gamma": 0.05453795212230679
+  },
+  "expected_tpr_at_fpr_001": 0.33901054339010545,
+  "expected_brier": 0.08916840355293064
+}

@@ -1,0 +1,6 @@
+config,ROC-AUC,PR-AUC,pAUC<=0.2,TPR@FPR=0.01,TPR@FPR=0.05,TPR@FPR=0.10
+A) stack uncalibrated (passthrough=False),0.9336,0.9459,0.8417,0.1354,0.6176,0.807
+B) stack + isotonic on val,0.9331,0.9456,0.8409,0.002,0.4355,0.7976
+C) stack + sigmoid (Platt) on val,0.9336,0.9459,0.8417,0.1354,0.6176,0.807
+"D) stack passthrough=True, uncalibrated",0.9331,0.952,0.8387,0.2238,0.5872,0.792
+E) stack passthrough=True + sigmoid,0.9331,0.952,0.8387,0.2238,0.5872,0.792

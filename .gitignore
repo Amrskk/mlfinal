@@ -1,28 +1,28 @@
 # Run artifacts
-*.log
-results.csv
-results.json
-model_comparison.csv
-calibration_ablation.csv
+##*.log
+##results.csv
+##results.json
+##model_comparison.csv
+##calibration_ablation.csv
 
 # Python
-__pycache__/
-*.pyc
-*.pyo
-.ipynb_checkpoints/
-.pytest_cache/
+##__pycache__/
+##*.pyc
+##*.pyo
+##.ipynb_checkpoints/
+##.pytest_cache/
 
 # Deployment artifacts (regenerable from run_full.py)
-artifacts/
-mlruns/
+##artifacts/
+##mlruns/
 
 # Env
-.env
-venv/
-.venv/
+##.env
+##venv/
+##.venv/
 
 # OS
-.DS_Store
-Thumbs.db
-.ruff_cache
-.vscode
+##.DS_Store
+##Thumbs.db
+##.ruff_cache
+##.vscode

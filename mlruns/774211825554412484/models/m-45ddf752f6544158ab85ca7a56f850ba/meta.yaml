@@ -1,0 +1,10 @@
+artifact_location: file:///home/amrskk/mlfinal/mlruns/774211825554412484/models/m-45ddf752f6544158ab85ca7a56f850ba/artifacts
+creation_timestamp: 1778725998922
+experiment_id: '774211825554412484'
+last_updated_timestamp: 1778726001797
+model_id: m-45ddf752f6544158ab85ca7a56f850ba
+model_type: null
+name: model
+source_run_id: febc7cb88f5c4ac985ebe393f0a8f072
+status: 2
+status_message: null
