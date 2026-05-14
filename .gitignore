@@ -26,3 +26,8 @@
 ##Thumbs.db
 ##.ruff_cache
 ##.vscode
+.vscode/
+.ruff_cache/
+*.db
+*.db-shm
+*.db-wal
