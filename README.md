@@ -314,7 +314,7 @@ flowchart TD
 ## Repository layout
 
 ```
-work2/
+/
 ├── README.md                       # this file
 ├── magic_gamma_pipeline.ipynb      # full training / evaluation pipeline
 ├── build_notebook.py               # regenerates magic_gamma_pipeline.ipynb
