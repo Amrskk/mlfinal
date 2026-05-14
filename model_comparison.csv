@@ -2,5 +2,5 @@ model,ROC-AUC,pAUC<=0.2,TPR@FPR=0.01,TPR@FPR=0.05,TPR@FPR=0.10
 RandomForest,0.9359,0.8489,0.307,0.6164,0.8029
 XGBoost (tuned),0.9415,0.8558,0.3491,0.633,0.8062
 LightGBM,0.9405,0.852,0.3212,0.616,0.796
-"Stack (no passthrough, uncalibrated)",0.9328,0.8406,0.2149,0.6115,0.7786
-Stack + sigmoid calibration (headline),0.9328,0.8406,0.2149,0.6115,0.7786
+"Stack (no passthrough, uncalibrated)",0.9328,0.8406,0.2145,0.6115,0.7786
+Stack + sigmoid calibration (headline),0.9328,0.8406,0.2145,0.6115,0.7786
