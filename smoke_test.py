@@ -55,7 +55,7 @@ def make_pipe(model):
 
 
 # 1) Load & dedup
-df = pd.read_csv("telescope_data.csv", index_col=0)
+df = pd.read_csv("work2/telescope_data.csv", index_col=0)
 print(f"raw {df.shape},  dupes {df.duplicated().sum()}")
 df = df.drop_duplicates().reset_index(drop=True)
 y = (df["class"] == "g").astype(int).values

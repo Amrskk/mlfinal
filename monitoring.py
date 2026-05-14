@@ -34,7 +34,7 @@ from typing import Optional
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.metrics import brier_score_loss, roc_curve
+from sklearn.metrics import brier_score_loss
 
 sys.path.insert(0, str(Path(__file__).parent))
 from src.feature_engineering import RAW_FEATURES  # noqa: E402
@@ -223,7 +223,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     print("\n=== INPUT DRIFT (PSI per Hillas parameter) ===")
     psi_df = psi_report(ref, cur)
     print(psi_df.to_string(index=False))
-    worst = psi_df["verdict"].max()
+    # Severity order, not lexicographic: RETRAIN > watch > ok
+    _severity = {"ok": 0, "watch": 1, "RETRAIN": 2}
+    worst = max(psi_df["verdict"], key=_severity.get)
     summary = {"input_drift_overall": worst}
     if (psi_df["verdict"] == "RETRAIN").any():
         print("\n→ At least one feature exceeds PSI 0.25. Recommend RETRAIN.")
@@ -257,11 +259,6 @@ def main(argv: Optional[list[str]] = None) -> int:
 
         print("\n=== PERFORMANCE DRIFT (TPR @ FPR=0.01) ===")
         if expected_tpr is None:
-            # Compute on the fly if no baseline saved — useful first-pass
-            fpr_ref, tpr_ref, _ = roc_curve(
-                y_true,  # this is only used if no baseline; degenerate but informative
-                proba,
-            )
             print(
                 "No expected_tpr_at_fpr_001 baseline in config. "
                 "Pass --expected-tpr to enable verdict."

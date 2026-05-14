@@ -17,3 +17,16 @@ shap>=0.45                    # TreeExplainer for the LGBM base learner
 optuna>=3.5                   # used for the optional tuning cell
 nbformat>=5.10                # only for regenerating the notebook
 jupyter>=1.0
+
+# Experiment tracking (run_full.py)
+mlflow>=2.13,<3
+
+# Serving (server.py + Dockerfile)
+fastapi>=0.110,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2.6,<3
+joblib>=1.4,<2
+
+# Tests & CI
+pytest>=8,<9
+httpx>=0.27,<1                # used by fastapi.testclient in api_smoke.py

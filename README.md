@@ -314,10 +314,10 @@ flowchart TD
 ## Repository layout
 
 ```
-mlfinal/
+work2/
 ├── README.md                       # this file
-├── METHODOLOGY_REVIEW.md           # audit of the original proposal + fixes
 ├── magic_gamma_pipeline.ipynb      # full training / evaluation pipeline
+├── build_notebook.py               # regenerates magic_gamma_pipeline.ipynb
 ├── src/
 │   ├── feature_engineering.py      # MagicFeatureEngineer + constraint validator
 │   └── metrics.py                  # tpr_at_fpr, partial_auc, efficiency_table
@@ -326,9 +326,15 @@ mlfinal/
 ├── run_full.py                     # full run: Optuna + baselines + stack
 ├── smoke_test.py                   # quick end-to-end check
 ├── calibration_ablation.py         # isotonic vs sigmoid vs passthrough A/B
+├── server.py                       # FastAPI inference server
+├── api_smoke.py                    # in-process API smoke test
+├── monitoring.py                   # PSI / performance / calibration drift
+├── Dockerfile                      # multi-stage serving image
+├── .dockerignore
+├── artifacts/                      # produced by run_full.py
+│   ├── model_v1.joblib             # sigmoid-calibrated tuned XGBoost
+│   └── deployment_config.json      # threshold + monitoring baselines
 ├── best_xgb_params.json            # Optuna-tuned XGBoost params (regenerated)
-├── build_notebook.py               # regenerates magic_gamma_pipeline.ipynb
-├── diagram/                        # methodology diagrams
 └── LICENSE.txt
 ```
 

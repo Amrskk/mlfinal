@@ -24,7 +24,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # Config & model loading
 
@@ -97,7 +97,21 @@ class HillasInput(BaseModel):
     fM3Long: float = Field(description="3rd moment along major axis (mm)")
     fM3Trans: float = Field(description="3rd moment along minor axis (mm)")
     fAlpha: float = Field(ge=0, le=90, description="Source-pointing angle (deg)")
-    fDist: float = Field(gt=0, le=500, description="Distance from camera center (mm)")
+    fDist: float = Field(gt=0, le=600, description="Distance from camera center (mm)")
+
+    @model_validator(mode="after")
+    def _physical(self):
+        # Mirror src/feature_engineering.validate_physical_constraints so the
+        # API rejects geometrically impossible ellipses (e.g. width > length).
+        if self.fLength < self.fWidth:
+            raise ValueError(
+                "fLength must be >= fWidth (major axis cannot be smaller than minor axis)"
+            )
+        if self.fConc < self.fConc1:
+            raise ValueError(
+                "fConc must be >= fConc1 (two-pixel concentration cannot be smaller than one-pixel)"
+            )
+        return self
 
 
 class BatchInput(BaseModel):

@@ -137,7 +137,7 @@ def main():
     mlflow_run = _maybe_start_mlflow()
 
     df = (
-        pd.read_csv("telescope_data.csv", index_col=0)
+        pd.read_csv("work2/telescope_data.csv", index_col=0)
         .drop_duplicates()
         .reset_index(drop=True)
     )

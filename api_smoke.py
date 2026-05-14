@@ -17,18 +17,20 @@ from server import app
 
 ROOT = Path(__file__).parent
 
-# A real gamma-like row from the dataset (small fAlpha → likely gamma)
+# A real gamma-like row from the dataset (small fAlpha → likely gamma).
+# Picked from telescope_data.csv row 1 — fAlpha = 6.36° is well into the
+# source-pointing regime where gammas dominate.
 GAMMA_LIKE = {
-    "fLength": 28.7967,
-    "fWidth": 16.0021,
-    "fSize": 2.6449,
-    "fConc": 0.3918,
-    "fConc1": 0.1982,
-    "fAsym": 27.7004,
-    "fM3Long": 22.011,
-    "fM3Trans": -8.2027,
-    "fAlpha": 40.092,
-    "fDist": 81.8828,
+    "fLength": 31.6036,
+    "fWidth": 11.7235,
+    "fSize": 2.5185,
+    "fConc": 0.5303,
+    "fConc1": 0.3773,
+    "fAsym": 26.2722,
+    "fM3Long": 23.8238,
+    "fM3Trans": -9.9574,
+    "fAlpha": 6.3609,
+    "fDist": 205.261,
 }
 
 
@@ -89,6 +91,14 @@ def main() -> int:
         r = client.post("/predict", json=missing)
         assert r.status_code == 422
         print("POST /predict (missing field) → 422 as expected")
+
+        # Validation: geometrically impossible ellipse (width > length) → 422
+        bad_geom = dict(GAMMA_LIKE)
+        bad_geom["fLength"] = 5.0
+        bad_geom["fWidth"] = 50.0
+        r = client.post("/predict", json=bad_geom)
+        assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
+        print("POST /predict (width > length) → 422 as expected")
 
     print("\nALL API SMOKE TESTS PASSED")
     return 0
