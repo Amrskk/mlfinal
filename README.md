@@ -35,13 +35,13 @@ All ratio features use an additive ε = 1e-3 to handle the **98 rows with `fWidt
 | Feature                   | Formula                                | Physical Principle    | Gamma Signature      | Hadron Signature    |
 | ------------------------- | -------------------------------------- | --------------------- | -------------------- | ------------------- |
 | $\text{Ellipticity} (\epsilon)$           | $\frac{\text{fLength}}{fWidth + \epsilon}$                 | EM cascade geometry   | Elongated (high $\epsilon$)   | Rounder (low $\epsilon$)     |
-| $\text{Shower Density} (\rho)$        | \frac{\text{fSize}}{\text{fLength} \cdot \text{fWidth} + \epsilon}         | Energy concentration  | Dense (high $\rho$)       | Diffuse (low $\rho$)     |
-| $\text{Miss Parameter}$            | $\text{fDist} \cdot \sin{\text{fAlpha}}$                    | Source directionality | Near zero            | Random, larger      |
-| $\text{Concentration Ratio }(k)$   | \frac{\text{fConc}}{\text{fConc1} + \epsilon}                   | Core light profile    | $\ge$ 1, near 1          | $\ge$ 1, larger, near ~2         |
+| $\text{Shower Density} (\rho)$        | $\frac{\text{fSize}}{\text{fLength} \cdot \text{fWidth} + \epsilon}$         | Energy concentration  | Dense (high $\rho$)       | Diffuse (low $\rho$)     |
+| $\text{Miss Parameter}$            | $\text{fDist} \cdot \sin{(\text{fAlpha})}$                    | Source directionality | Near zero            | Random, larger      |
+| $\text{Concentration Ratio }(k)$   | $\frac{\text{fConc}}{\text{fConc1} + \epsilon}$                   | Core light profile    | $\ge$ 1, near 1          | $\ge$ 1, larger, near ~2         |
 | $\text{3rd Moment Magnitude }(M3) | $\sqrt{\text{M3Long}^{2} + \text{M3Trans}^{2}}$                  | Shower asymmetry      | Moderate, consistent | Extreme, variable   |
 | $\text{Log brightest-pair }(LBP)$  | $\text{fSize} + \log_{10}{\text{fConc} + \epsilon}$               | Photons in 2 brightest pixels | High         | Lower               |
-| $\text{Longitudinal Asym. }(LA)$   | $\frac{\text{fAsym}}{\text{fLength} + \epsilon}                  | Shower max position   | Consistent           | Stochastic          |
-| $\cos{\alpha}$                     | $\cos{\text{fAlpha} \cdot \frac{π}{180}}                    | Source-pointing       | Near 1               | Mean ≈ 0.64 on $[0, 90^{\circ}]$ |
+| $\text{Longitudinal Asym. }(LA)$   | $\frac{\text{fAsym}}{\text{fLength} + \epsilon}$                  | Shower max position   | Consistent           | Stochastic          |
+| $\cos{(\alpha)}$                     | $\cos{(\text{fAlpha} \cdot \frac{π}{180})}$                    | Source-pointing       | Near 1               | Mean ≈ 0.64 on $[0, 90^{\circ}]$ |
 
 The implementation lives in `src/feature_engineering.py` (`MagicFeatureEngineer`).
 
