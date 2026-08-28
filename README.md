@@ -2,7 +2,7 @@
 
 > **Headline model:** Optuna-tuned XGBoost with sigmoid calibration, achieving **TPR = 0.349 at FPR = 0.01** on the held-out test set (3,781 samples). Beats Random Forest, LightGBM, SVM-RBF, and a five-learner stacking ensemble on every low-FPR operating point.
 >
-> **Why XGBoost, not stacking?** We initially proposed a stacking ensemble as the main model. End-to-end measurement (see Results section below and `calibration_ablation.csv`) showed that the LR meta-learner's sigmoid output collapses resolution in the high-confidence tail — exactly where gamma-ray classification operates. Tuned XGBoost beats every stacking variant we tried. We report this finding honestly rather than burying it: the stack is now documented as a comparison study, not the production model.
+> **Why XGBoost, not stacking?** We initially proposed a stacking ensemble as the main model. End-to-end measurement (see Results section below and `calibration_ablation.csv`) showed that the LR meta-learner's sigmoid output collapses resolution in the high-confidence tail — exactly where gamma-ray classification operates. Tuned XGBoost beats every stacking variant we tried.
 
 
 ### Background: What Are We Looking At?
@@ -17,7 +17,7 @@ Our raw features describe this ellipse:
 | ---------- | -------------------------------------------------------------------------------- |
 | `fLength`  | Major axis of the ellipse (mm) — lateral spread of the shower                    |
 | `fWidth`   | Minor axis of the ellipse (mm) — vertical development of the shower              |
-| `fSize`    | log₁₀ of total photon count — proxy for primary particle energy                  |
+| `fSize`    | $\log_{10}$ of total photon count — proxy for primary particle energy                  |
 | `fConc`    | Ratio of two brightest pixels to total — light concentration                     |
 | `fConc1`   | Ratio of single brightest pixel to total — peak concentration                    |
 | `fAsym`    | Distance from brightest pixel to center along major axis (mm) — shower asymmetry |
@@ -34,16 +34,14 @@ All ratio features use an additive ε = 1e-3 to handle the **98 rows with `fWidt
 
 | Feature                   | Formula                                | Physical Principle    | Gamma Signature      | Hadron Signature    |
 | ------------------------- | -------------------------------------- | --------------------- | -------------------- | ------------------- |
-| Ellipticity (ε)           | fLength / (fWidth + ε)                 | EM cascade geometry   | Elongated (high ε)   | Rounder (low ε)     |
-| Shower Density (ρ)        | fSize / (fLength × fWidth + ε)         | Energy concentration  | Dense (high ρ)       | Diffuse (low ρ)     |
-| Miss Parameter            | fDist × sin(fAlpha)                    | Source directionality | Near zero            | Random, larger      |
-| Concentration Ratio (κ)   | fConc / (fConc1 + ε)                   | Core light profile    | ≥ 1, near 1          | ≥ 1, larger         |
-| 3rd Moment Magnitude (M3) | √(M3Long² + M3Trans²)                  | Shower asymmetry      | Moderate, consistent | Extreme, variable   |
-| Log brightest-pair (LBP)  | fSize + log₁₀(fConc + ε)               | Photons in 2 brightest pixels | High         | Lower               |
-| Longitudinal Asym. (LA)   | fAsym / (fLength + ε)                  | Shower max position   | Consistent           | Stochastic          |
-| cos α                     | cos(fAlpha · π/180)                    | Source-pointing       | Near 1               | Mean ≈ 0.64 on [0,90°] |
-
-The original "Size–Concentration" feature `fSize × fConc` was dropped because `fSize` is already a logarithm, so multiplying it by a `[0,1]` ratio doesn't have a clean physical interpretation. The replacement `LBP = fSize + log₁₀(fConc + ε)` is interpretable as the log of the photon count in the two brightest pixels.
+| $\text{Ellipticity} (\epsilon)$           | $\frac{\text{fLength}}{fWidth + \epsilon}$                 | EM cascade geometry   | Elongated (high $\epsilon$)   | Rounder (low $\epsilon$)     |
+| $\text{Shower Density} (\rho)$        | $\frac{\text{fSize}}{\text{fLength} \cdot \text{fWidth} + \epsilon}$         | Energy concentration  | Dense (high $\rho$)       | Diffuse (low $\rho$)     |
+| $\text{Miss Parameter}$            | $\text{fDist} \cdot \sin{(\text{fAlpha})}$                    | Source directionality | Near zero            | Random, larger      |
+| $\text{Concentration Ratio }(k)$   | $\frac{\text{fConc}}{\text{fConc1} + \epsilon}$                   | Core light profile    | $\ge$ 1, near 1          | $\ge$ 1, larger, near ~2         |
+| $\text{3rd Moment Magnitude }(M3)$ | $\sqrt{\text{M3Long}^{2} + \text{M3Trans}^{2}}$                  | Shower asymmetry      | Moderate, consistent | Extreme, variable   |
+| $\text{Log brightest-pair }(LBP)$  | $\text{fSize} + \log_{10}{(\text{fConc} + \epsilon)}$               | Photons in 2 brightest pixels | High         | Lower               |
+| $\text{Longitudinal Asym. }(LA)$   | $\frac{\text{fAsym}}{\text{fLength} + \epsilon}$                  | Shower max position   | Consistent           | Stochastic          |
+| $\cos{(\alpha)}$                     | $\cos{(\text{fAlpha} \cdot \frac{π}{180})}$                    | Source-pointing       | Near 1               | Mean ≈ 0.64 on $[0, 90^{\circ}]$ |
 
 The implementation lives in `src/feature_engineering.py` (`MagicFeatureEngineer`).
 
