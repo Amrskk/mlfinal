@@ -140,7 +140,7 @@ Direct measurement (see `calibration_ablation.csv`) showed that isotonic calibra
 
 ### Stacking ensemble — documented comparison
 
-We also built a five-learner stacking ensemble (RF + tuned XGBoost + LightGBM + SVM-RBF + Logistic Regression, with an L2 Logistic Regression meta-learner) to test the hypothesis from the original proposal. It's in `magic_gamma_pipeline.ipynb` and runs end-to-end. The empirical finding is in the Results table: the stack does **not** beat tuned XGBoost on the low-FPR region, because the LR meta-learner's sigmoid squashes resolution exactly where the headline metric lives. Aggregate ROC-AUC is within 0.01, but TPR@FPR=0.01 is 38% lower. This is a real result and worth reporting; it's why we ship XGBoost.
+We also built a five-learner stacking ensemble (RF + tuned XGBoost + LightGBM + SVM-RBF + Logistic Regression, with an L2 Logistic Regression meta-learner) to test the hypothesis from the original proposal. It's in `magic_gamma_pipeline.ipynb` and runs end-to-end. The empirical finding is in the Results table: the stack does **not** beat tuned XGBoost on the low-FPR region, because the LR meta-learner's sigmoid squashes resolution exactly where the headline metric lives. Aggregate ROC-AUC is within 0.01, but TPR@FPR=0.01 is 38% lower. That's why we ship XGBoost.
 
 ---
 
@@ -222,8 +222,7 @@ flowchart TD
 
 ### 3. Production pipeline — tuned XGBoost
 
-This is the shipped model. Single learner, single calibration step, single SHAP
-explainer — no meta-learner, no second calibration set.
+This is the shipped model
 
 ```mermaid
 flowchart TD
@@ -241,13 +240,7 @@ flowchart TD
 
 We built this to test the original proposal's hypothesis that a stacking
 ensemble would outperform single learners. Empirically it does not (see
-Results table — TPR@FPR=0.01 = 0.215 vs 0.349 for tuned XGBoost). It's kept
-in the codebase as honest reporting of a negative result. The original drawio
-diagram (`diagram/model.drawio.png`) had the HPO arrow flowing *out* of the
-prediction stage, which read as "predict then tune". The corrected version
-below puts Optuna where it belongs — as a training-time loop around the
-base learners — and adds the preprocessing chain plus the sigmoid calibration
-step that the original omitted.
+Results table — TPR@FPR=0.01 = 0.215 vs 0.349 for tuned XGBoost)
 
 ```mermaid
 flowchart TD
@@ -269,13 +262,7 @@ flowchart TD
 ### 4. Deployment and Monitoring
 
 What gets deployed is the tuned XGBoost pipeline (preprocessing + XGBoost +
-sigmoid calibration), serialized as a single artifact. Corrected version of
-the original `diagram/mlops.drawio.png`. The key changes from the original:
-the drift-response logic is split into three remediations (retrain /
-recalibrate sigmoid / re-pick threshold) rather than lumping them, the
-"ROC-AUC decay" performance probe is replaced with "TPR @ FPR=0.01 decay"
-to match the headline metric, and a labeled-holdout batch is made explicit
-as the source of ground truth that the performance probe depends on.
+sigmoid calibration), serialized as a single artifact
 
 ```mermaid
 flowchart TD
@@ -313,27 +300,27 @@ flowchart TD
 
 ```
 /
-├── README.md                       # this file
-├── magic_gamma_pipeline.ipynb      # full training / evaluation pipeline
-├── build_notebook.py               # regenerates magic_gamma_pipeline.ipynb
-├── src/
-│   ├── feature_engineering.py      # MagicFeatureEngineer + constraint validator
-│   └── metrics.py                  # tpr_at_fpr, partial_auc, efficiency_table
-├── telescope_data.csv              # UCI MAGIC dataset
-├── requirements.txt
-├── run_full.py                     # full run: Optuna + baselines + stack
-├── smoke_test.py                   # quick end-to-end check
-├── calibration_ablation.py         # isotonic vs sigmoid vs passthrough A/B
-├── server.py                       # FastAPI inference server
-├── api_smoke.py                    # in-process API smoke test
-├── monitoring.py                   # PSI / performance / calibration drift
-├── Dockerfile                      # multi-stage serving image
-├── .dockerignore
-├── artifacts/                      # produced by run_full.py
-│   ├── model_v1.joblib             # sigmoid-calibrated tuned XGBoost
-│   └── deployment_config.json      # threshold + monitoring baselines
-├── best_xgb_params.json            # Optuna-tuned XGBoost params (regenerated)
-└── LICENSE.txt
+    README.md                       # this file
+    magic_gamma_pipeline.ipynb      # full training / evaluation pipeline
+    build_notebook.py               # regenerates magic_gamma_pipeline.ipynb
+    src/
+        feature_engineering.py      # MagicFeatureEngineer + constraint validator
+        metrics.py                  # tpr_at_fpr, partial_auc, efficiency_table
+    telescope_data.csv              # UCI MAGIC dataset
+    requirements.txt
+    run_full.py                     # full run: Optuna + baselines + stack
+    smoke_test.py                   # quick end-to-end check
+    calibration_ablation.py         # isotonic vs sigmoid vs passthrough A/B
+    server.py                       # FastAPI inference server
+    api_smoke.py                    # in-process API smoke test
+    monitoring.py                   # PSI / performance / calibration drift
+    Dockerfile                      # multi-stage serving image
+     dockerignore
+    artifacts/                      # produced by run_full.py
+        model_v1.joblib             # sigmoid-calibrated tuned XGBoost
+        deployment_config.json      # threshold + monitoring baselines
+    best_xgb_params.json            # Optuna-tuned XGBoost params (regenerated)
+    LICENSE.txt
 ```
 
 ## How to run — training
